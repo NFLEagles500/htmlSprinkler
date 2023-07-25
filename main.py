@@ -2,6 +2,7 @@
 #wifipsw, timeApiUrl. timeApiUrl is:
 # 'https://timeapi.io/api/TimeZone/zone?timeZone={INSERT TIME ZONE HERE}'
 
+from microdot_utemplate import render_template
 from machine import Pin, UART, RTC
 from utime import sleep, sleep_ms, time, localtime
 import network
@@ -10,6 +11,8 @@ import ntptime
 import usys
 import uos
 import urequests
+import uasyncio
+from microdot_asyncio import Microdot, Response
 
 #Allow time to interrupt main.py
 sleep(5)
@@ -93,7 +96,7 @@ github_url = 'https://raw.githubusercontent.com/NFLEagles500/htmlSprinkler/main/
 if dev == 'picow':
     connect()
     # Perform initial update on startup
-    update_main_script()
+    #update_main_script()
     try:
         while True:
             try:
@@ -102,6 +105,7 @@ if dev == 'picow':
                 break
             except:
                 print('ntptime fail, trying again')
+                sleep(1)
                 pass
         while True:
             try:
@@ -110,13 +114,24 @@ if dev == 'picow':
                 break
             except:
                 print('responseFromTimeapi failed, trying again')
+                sleep(1)
                 pass
         localUtcOffset = responseFromTimeapi.json()['currentUtcOffset']['seconds']
         responseFromTimeapi.close()
     except Exception as error:
         appLog(error)
 
+app = Microdot()
+
+Response.default_content_type = 'text/html'
+
+@app.route('/')
+async def index(request):
+    return 'Hello world'
+
+app.run(port=80)
 #Start coding.  Blink added for example
 while True:
     led.toggle()
     sleep(2)
+
