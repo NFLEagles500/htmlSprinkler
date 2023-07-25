@@ -93,7 +93,7 @@ github_url = 'https://raw.githubusercontent.com/NFLEagles500/htmlSprinkler/main/
 if dev == 'picow':
     connect()
     # Perform initial update on startup
-    #update_main_script()
+    update_main_script()
     try:
         while True:
             try:
