@@ -1,7 +1,7 @@
 #If you are using a Pico W, be sure to create the envSecrets.py with hostname, ssid,
 #wifipsw, timeApiUrl. timeApiUrl is:
 # 'https://timeapi.io/api/TimeZone/zone?timeZone={INSERT TIME ZONE HERE}'
-
+from picozero import pico_temp_sensor
 from microdot_utemplate import render_template
 from machine import Pin, UART, RTC
 from utime import sleep, sleep_ms, time, localtime
@@ -13,6 +13,7 @@ import uos
 import urequests
 import uasyncio
 from microdot_asyncio import Microdot, Response
+
 
 #Allow time to interrupt main.py
 sleep(5)
@@ -127,9 +128,19 @@ Response.default_content_type = 'text/html'
 
 @app.route('/')
 async def index(request):
-    return 'Hello world'
+    picoTemp = str(pico_temp_sensor.temp)
+    if led.value() == 0:
+        valveStat = 'Closed'
+    else:
+        valveStat = 'Open'
+    return render_template('home.html', picoTemp, valveStat)
 
-app.run(port=80)
+try:
+    print('Starting webserver')
+    app.run(port=80)
+except:
+    app.shutdown()
+    machine.reset()
 #Start coding.  Blink added for example
 while True:
     led.toggle()
