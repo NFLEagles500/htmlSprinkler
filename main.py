@@ -93,10 +93,24 @@ github_url = 'https://raw.githubusercontent.com/NFLEagles500/htmlSprinkler/main/
 if dev == 'picow':
     connect()
     # Perform initial update on startup
-    update_main_script()
+    #update_main_script()
     try:
-        ntptime.settime()
-        responseFromTimeapi = urequests.get(envSecrets.timeApiUrl)
+        while True:
+            try:
+                ntptime.settime()
+                print('ntptime success')
+                break
+            except:
+                print('ntptime fail, trying again')
+                pass
+        while True:
+            try:
+                responseFromTimeapi = urequests.get(envSecrets.timeApiUrl)
+                print('responseFromTimeapi worked')
+                break
+            except:
+                print('responseFromTimeapi failed, trying again')
+                pass
         localUtcOffset = responseFromTimeapi.json()['currentUtcOffset']['seconds']
         responseFromTimeapi.close()
     except Exception as error:
