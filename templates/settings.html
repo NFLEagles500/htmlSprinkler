@@ -1,0 +1,76 @@
+{% args valveTemp, startHourOptions, startMinOptions, endHourOptions, endMinOptions, intervalOptions, mistersOnMinutesDefault %} <!-- , startHour, startMin, endHour, endMin -->
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Mister settings</title>
+</head>
+<body>
+<h2>Chicken Mister Settings</h2>
+
+<form enctype="text/plain" action = "/update" id="setts" method="post" name="misterSettings">
+<p>When temp above:&nbsp;<select name="toggleTemp">{{ valveTemp }}</select></p>
+
+<p>Start Time:&nbsp; &nbsp;<select name="startHour">{{ startHourOptions }}</select>&nbsp;:&nbsp;<select name="startMin">{{ startMinOptions }}</select></p>
+
+<p>End Time:&nbsp; &nbsp;<select name="endHour">{{ endHourOptions }}</select>&nbsp;:&nbsp;<select name="endMin">{{ endMinOptions }}</select></p>
+
+<label for="interval">For every:</label> <select id="interval" name="interval" onchange="updateMistersOnMinutesOptions()">{{ intervalOptions }}</select> <label for="mistersOnMinutes">run misters for:</label> <select name="mistersOnMinutes" id="mistersOnMinutes"></select> minutes 
+<script>
+    function updateMistersOnMinutesOptions() {
+      const intervalSelect = document.getElementById('interval');
+      const mistersOnMinutesSelect = document.getElementById('mistersOnMinutes');
+      const selectedInterval = parseInt(intervalSelect.value);
+
+      mistersOnMinutesSelect.innerHTML = '';
+
+      for (let i = 1; i <= 60; i++) {
+        if (i <= selectedInterval) {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = i;
+          
+          if (i === {{ mistersOnMinutesDefault }}) {
+            option.selected = true;
+          }
+          mistersOnMinutesSelect.appendChild(option);
+        }
+      }
+    }
+
+    // Call the function initially to set the initial options
+    updateMistersOnMinutesOptions();
+
+    // Add an event listener to the "interval" select in case the user changes the selection
+    document.getElementById('interval').addEventListener('change', updateMistersOnMinutesOptions);
+</script>
+<script>
+      function showProcessingPopup() {
+        const popup = document.createElement("div");
+        popup.textContent = "Saving settings...";
+        popup.style.position = "fixed";
+        popup.style.top = "0";
+        popup.style.left = "0";
+        popup.style.width = "100%";
+        popup.style.height = "100%";
+        popup.style.zIndex = "1000";
+        document.body.appendChild(popup);
+
+        setTimeout(() => {
+          popup.remove();
+          window.location.href = "/";
+        }, 2000);
+      }
+
+    document.getElementById("submitForm").addEventListener("click", showProcessingPopup);
+    
+</script>
+
+<p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<input name="submitForm" id="submitForm" type="submit" value="Submit" /></p>
+</form>
+
+<p>&nbsp;</p>
+
+<p>&nbsp;</p>
+</body>
+</html>
+
