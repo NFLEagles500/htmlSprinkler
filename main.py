@@ -11,6 +11,7 @@ import ntptime
 import usys
 import uos
 import uasyncio
+import _thread
 from microdot_asyncio import Microdot, Response, redirect
 
 #Allow time to interrupt main.py
@@ -180,6 +181,38 @@ def readNewValveSettingsDotText():
     endMinHTMLOptions = createMinHTMLoptionsList(endMin, 'minute')
     intervalHTMLOptions = createIntervalHTMLOptions(intervalDefault)
 
+def core1():
+    #print(f'Core1 says toggleTemp is {toggleTemp}')
+    #Use this to loop evaluation of valve
+    while True:
+        global manualConLabel
+        if manualConLabel == 'Turn_ON':
+            #this means the manual control does not have the
+            #misters running
+            getTime = utcToLocal('time').split(':')
+            if int(startHour) <= int(getTime[0]):
+                print('The hour after startHour')
+                if int(startHour) == int(getTime[0]) and int(startMin) <= int(getTime[1]):
+                    print('It is after the Start time, evaluating End...')
+                    if int(getTime[0]) <= int(endHour):
+                        print('current hour is less or equal to endHour')
+                        if int(getTime[0]) == int(endHour) and int(endMin) >= int(getTime[1]):
+                            print('It is a good time to run misters, checking temp...')
+                        else:
+                            print('Looks like it is too late to run misters')
+                    else:
+                        print('Its too late to run misters')
+                else:
+                    print('Getting close to start, just minutes away..')
+            else:
+                if int(startHour) > int(getTime[0]):
+                    print(f'Its too early to run misters startHour: {startHour} versus current: {getTime[0]}')
+        else:
+            #this else pertains to the manual control button
+            #write code if it is manually on
+            while manualConLabel == 'Turn_OFF':
+                pass
+        sleep(5)
 
 #Variables
 #Setting defaults depending on which pico
@@ -191,6 +224,8 @@ else:
     dev = 'pico'
     led = Pin(25, Pin.OUT)
 led.value(0)
+global manualConLabel
+manualConLabel = 'Turn_ON'
 
 verbose = False
 # URL of the raw main.py file on GitHub
@@ -199,7 +234,7 @@ github_url = 'https://raw.githubusercontent.com/NFLEagles500/htmlSprinkler/main/
 if dev == 'picow':
     connect()
     # Perform initial update on startup
-    update_main_script()
+    #update_main_script()
     try:
         while True:
             try:
@@ -230,6 +265,7 @@ Response.default_content_type = 'text/html'
 
 @app.route('/')
 async def index(request):
+    global manualConLabel
     picoTemp = tempSensor()
     if led.value() == 0:
         valveStat = 'Closed'
@@ -259,6 +295,8 @@ async def process_updates(request):
     writeToValveSettingsDotText(codes)
     return redirect("/")
 
+readNewValveSettingsDotText()
+second_thread = _thread.start_new_thread(core1, ())
 
 try:
     print('Starting webserver')
