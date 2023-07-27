@@ -1,0 +1,40 @@
+{% args picoTemp, valveStat, toggleTemp, startHour, startMin, endHour, endMin, manualConLabel %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Time/Temperature sprinkler valve</title>
+	<meta http-equiv="refresh" content="5">
+</head>
+<body>
+<h2>Sprinkler Valve</h2>
+
+<p>Current Temperature: {{ picoTemp }}</p>
+
+<p>Valve is currently: {{ valveStat }}</p>
+
+<p>Temperature Settings</p>
+
+<ul>
+	<li>Temp: {{ toggleTemp }}</li>
+	<li>Start Time: {{ startHour }}:{{ startMin }}</li>
+	<li>End Time: {{ endHour }}:{{ endMin }}</li>
+</ul>
+<form id="myForm" method="post" action="/">
+<p>Manual Control&nbsp; &nbsp;<input name="manualControlButton" type="submit" value={{ manualConLabel }} /></p>
+</form>
+<p><input name="modifyTemperatureSettings" id="modifyButton" type="button" value="Modify Temperature Settings" /></p>
+<script>
+function modifySettings() {
+  window.location.href = "/update";
+}
+
+document.getElementById("modifyButton").addEventListener("click", modifySettings);
+</script>
+
+
+<p>&nbsp;</p>
+</body>
+</html>
