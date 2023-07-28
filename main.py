@@ -59,7 +59,7 @@ def tempSensor():
     reading = sensor_temp.read_u16() * conversion_factor 
     temperature = 27 - (reading - 0.706)/0.001721
     temp = temperature * 9 / 5 + 32
-    return temp
+    return float(f'{temp:.1f}')
 
 def connect():
     #Connect to WLAN
@@ -181,9 +181,27 @@ def readNewValveSettingsDotText():
     endMinHTMLOptions = createMinHTMLoptionsList(endMin, 'minute')
     intervalHTMLOptions = createIntervalHTMLOptions(intervalDefault)
 
+def valveControl(action):
+    if action == 'Open':
+        led.value(1)
+    elif action == 'Close':
+        led.value(0)
+    #return current status
+    if led.value() == 0:
+        return 'Closed'
+    else:
+        return 'Opened'
+        
+
 def core1():
     #print(f'Core1 says toggleTemp is {toggleTemp}')
     #Use this to loop evaluation of valve
+    global mistersOnTimer
+    global intervalTimer
+    global misterStatus
+    mistersOnTimer = 0
+    intervalTimer = 0
+    misterStatus = false
     while True:
         global manualConLabel
         if manualConLabel == 'Turn_ON':
@@ -198,6 +216,21 @@ def core1():
                         print('current hour is less or equal to endHour')
                         if int(getTime[0]) == int(endHour) and int(endMin) >= int(getTime[1]):
                             print('It is a good time to run misters, checking temp...')
+                            #Evaluate whether temp is above option selected AFTER intervalTimer has ran fully
+                            if intervalTimer == 0:
+                                if tempSensor >= toggleTemp:
+                                    print('Current temp is at or above setting, running misters')
+                                    if mistersOnTimer == 0 and intervalTimer == 0:
+                                        
+                                else:
+                                    print('Temp is too low, or option is disabled')
+                            else:
+                                #use this else to evaluate if interval timer is done
+                                if (utime.time() - intervalTimer) >= intervalDefault*60:
+                                    #setting intervalTimer AND mistersOnTimer to 0
+                                    intervalTimer = 0
+                                    mistersOnTimer = 0
+                                    
                         else:
                             print('Looks like it is too late to run misters')
                     else:
