@@ -201,7 +201,7 @@ def core1():
     global misterStatus
     mistersOnTimer = 0
     intervalTimer = 0
-    misterStatus = false
+    misterStatus = False
     while True:
         global manualConLabel
         if manualConLabel == 'Turn_ON':
@@ -221,16 +221,31 @@ def core1():
                                 if tempSensor >= toggleTemp:
                                     print('Current temp is at or above setting, running misters')
                                     if mistersOnTimer == 0 and intervalTimer == 0:
-                                        
+                                        vavleControl('Open')
+                                        misterStatus = True
+                                        mistersOnTimer = utime.time() + mistersOnMinutes*60
+                                        intervalTimer = utime.time() + interval*60
                                 else:
                                     print('Temp is too low, or option is disabled')
                             else:
                                 #use this else to evaluate if interval timer is done
-                                if (utime.time() - intervalTimer) >= intervalDefault*60:
+                                if utime.time() >= intervalTimer:
                                     #setting intervalTimer AND mistersOnTimer to 0
+                                    print('Current time has surpassed the interval, setting values to 0 to re-evaluate current temperature to restart')
                                     intervalTimer = 0
                                     mistersOnTimer = 0
-                                    
+                                else:
+                                    if mistersOnTimer == 0:
+                                        print('Misters already off, counting down interval')
+                                    else:
+                                        if utime.time() >= mistersOnTimer:
+                                            print('Misters duration done, turning off for rest of interval')
+                                            misterStatus = False
+                                            valveControl('Close')
+                                            mistersOnTimer = 0
+                                        else:
+                                            print('Misters are currently running within duration')
+                                        
                         else:
                             print('Looks like it is too late to run misters')
                     else:
@@ -244,8 +259,8 @@ def core1():
             #this else pertains to the manual control button
             #write code if it is manually on
             while manualConLabel == 'Turn_OFF':
-                pass
-        sleep(5)
+                print('Misters are on with manual override')
+    sleep(5)
 
 #Variables
 #Setting defaults depending on which pico
