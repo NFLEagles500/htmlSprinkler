@@ -1,0 +1,8 @@
+disableEnableLabel=Enable
+toggleTemp=95.5
+startHour=07
+startMin=00
+endHour=21
+endMin=30
+interval=60
+mistersOnMinutes=5
