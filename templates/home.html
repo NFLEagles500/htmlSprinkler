@@ -1,4 +1,4 @@
-{% args picoTemp, valveStat, toggleTemp, startHour, startMin, endHour, endMin, manualConLabel %}
+{% args picoTemp, valveStat, toggleTemp, startHour, startMin, endHour, endMin, manualConLabel, envStatus %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,6 +10,8 @@
 </head>
 <body>
 <h2>Sprinkler Valve</h2>
+
+<p>Environment Status: {{ envStatus }}</p>
 
 <p>Current Temperature: {{ picoTemp }}</p>
 
