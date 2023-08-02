@@ -1,4 +1,4 @@
-{% args valveTemp, startHourOptions, startMinOptions, endHourOptions, endMinOptions, intervalOptions, mistersOnMinutesDefault %} <!-- , startHour, startMin, endHour, endMin -->
+{% args valveTemp, startHourOptions, startMinOptions, endHourOptions, endMinOptions, intervalOptions, mistersOnMinutesDefault, disableEnableHTMLOptions %} <!-- , startHour, startMin, endHour, endMin -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,6 +8,9 @@
 <h2>Chicken Mister Settings</h2>
 
 <form enctype="text/plain" action = "/update" id="setts" method="post" name="misterSettings">
+
+<p>Environment Status:&nbsp;<select name="disableEnableLabel">{{ disableEnableHTMLOptions }}</select></p>
+
 <p>When temp above:&nbsp;<select name="toggleTemp">{{ valveTemp }}</select></p>
 
 <p>Start Time:&nbsp; &nbsp;<select name="startHour">{{ startHourOptions }}</select>&nbsp;:&nbsp;<select name="startMin">{{ startMinOptions }}</select></p>
