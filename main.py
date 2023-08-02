@@ -257,10 +257,8 @@ def core1():
                     print(f'Its too early to run misters startHour: {startHour} versus current: {getTime[0]}')
         else:
             #this else pertains to the manual control button
-            #write code if it is manually on
-            while manualConLabel == 'Turn_OFF':
-                print('Misters are on with manual override')
-    sleep(5)
+            print('Misters are on with manual override')
+        sleep(5)
 
 #Variables
 #Setting defaults depending on which pico
