@@ -93,6 +93,18 @@ def createTempHtmlOptionsList(toggleTemp):
         iter += .5
     return fullHtmlStr
 
+def createEnvStatusOptionsList(defaultValue):
+    fullHtmlStr = ""
+    options = ['Enable','Disable']
+    for item in options:
+        if item == defaultValue:
+            newStr = f'<option selected="selected" value="{item}">{item}</option>'
+        else:
+            newStr = f'<option value="{item}">{item}</option>'
+        fullHtmlStr = fullHtmlStr + newStr
+    return fullHtmlStr
+
+
 def createMinHTMLoptionsList(defaultValue, MinOrHour):
     iter = 0
     if MinOrHour.lower() == 'hour':
@@ -145,6 +157,8 @@ def readNewValveSettingsDotText():
     global endHourHTMLOptions
     global endMinHTMLOptions
     global intervalHTMLOptions
+    global disableEnableLabel
+    global disableEnableHTMLOptions
     with open('valveSettings.txt','r') as fr:
         lines = fr.readlines()
 
@@ -174,12 +188,16 @@ def readNewValveSettingsDotText():
     endMin = variables_dict.get('endMin')
     mistersOnMinutes = variables_dict.get('mistersOnMinutes')
     intervalDefault = variables_dict.get('interval')
+    disableEnableLabel = variables_dict.get('disableEnableLabel').replace("'","")
     valveHtmlTempOptions = createTempHtmlOptionsList(toggleTemp)
     startHourHTMLOptions = createMinHTMLoptionsList(startHour, 'hour')
     startMinHTMLOptions = createMinHTMLoptionsList(startMin, 'minute')
     endHourHTMLOptions = createMinHTMLoptionsList(endHour, 'hour')
     endMinHTMLOptions = createMinHTMLoptionsList(endMin, 'minute')
     intervalHTMLOptions = createIntervalHTMLOptions(intervalDefault)
+    disableEnableHTMLOptions = createEnvStatusOptionsList(disableEnableLabel)
+    if disableEnableLabel == 'Disable':
+        valveControl('Close')
 
 def valveControl(action):
     if action == 'Open':
@@ -204,60 +222,66 @@ def core1():
     misterStatus = False
     while True:
         global manualConLabel
-        if manualConLabel == 'Turn_ON':
-            #this means the manual control does not have the
-            #misters running
-            getTime = utcToLocal('time').split(':')
-            if int(startHour) <= int(getTime[0]):
-                print('The hour after startHour')
-                if int(startHour) == int(getTime[0]) and int(startMin) <= int(getTime[1]):
-                    print('It is after the Start time, evaluating End...')
-                    if int(getTime[0]) <= int(endHour):
-                        print('current hour is less or equal to endHour')
-                        if int(getTime[0]) == int(endHour) and int(endMin) >= int(getTime[1]):
-                            print('It is a good time to run misters, checking temp...')
-                            #Evaluate whether temp is above option selected AFTER intervalTimer has ran fully
-                            if intervalTimer == 0:
-                                if tempSensor >= toggleTemp:
-                                    print('Current temp is at or above setting, running misters')
-                                    if mistersOnTimer == 0 and intervalTimer == 0:
-                                        vavleControl('Open')
-                                        misterStatus = True
-                                        mistersOnTimer = utime.time() + mistersOnMinutes*60
-                                        intervalTimer = utime.time() + interval*60
-                                else:
-                                    print('Temp is too low, or option is disabled')
-                            else:
-                                #use this else to evaluate if interval timer is done
-                                if utime.time() >= intervalTimer:
-                                    #setting intervalTimer AND mistersOnTimer to 0
-                                    print('Current time has surpassed the interval, setting values to 0 to re-evaluate current temperature to restart')
-                                    intervalTimer = 0
-                                    mistersOnTimer = 0
-                                else:
-                                    if mistersOnTimer == 0:
-                                        print('Misters already off, counting down interval')
+        global disableEnableLabel
+        if disableEnableLabel == 'Enable':
+            if manualConLabel == 'Turn_ON':
+                #this means the manual control does not have the
+                #misters running
+                getTime = utcToLocal('time').split(':')
+                if int(startHour) <= int(getTime[0]):
+                    print('The hour after startHour')
+                    if int(startHour) == int(getTime[0]) and int(startMin) <= int(getTime[1]):
+                        print('It is after the Start time, evaluating End...')
+                        if int(getTime[0]) <= int(endHour):
+                            print('current hour is less or equal to endHour')
+                            if int(getTime[0]) == int(endHour) and int(endMin) >= int(getTime[1]):
+                                print('It is a good time to run misters, checking temp...')
+                                #Evaluate whether temp is above option selected AFTER intervalTimer has ran fully
+                                if intervalTimer == 0:
+                                    if tempSensor >= toggleTemp:
+                                        print('Current temp is at or above setting, running misters')
+                                        if mistersOnTimer == 0 and intervalTimer == 0:
+                                            vavleControl('Open')
+                                            misterStatus = True
+                                            mistersOnTimer = utime.time() + mistersOnMinutes*60
+                                            intervalTimer = utime.time() + interval*60
                                     else:
-                                        if utime.time() >= mistersOnTimer:
-                                            print('Misters duration done, turning off for rest of interval')
-                                            misterStatus = False
-                                            valveControl('Close')
-                                            mistersOnTimer = 0
+                                        print('Temp is too low, or option is disabled')
+                                else:
+                                    #use this else to evaluate if interval timer is done
+                                    if utime.time() >= intervalTimer:
+                                        #setting intervalTimer AND mistersOnTimer to 0
+                                        print('Current time has surpassed the interval, setting values to 0 to re-evaluate current temperature to restart')
+                                        intervalTimer = 0
+                                        mistersOnTimer = 0
+                                    else:
+                                        if mistersOnTimer == 0:
+                                            print('Misters already off, counting down interval')
                                         else:
-                                            print('Misters are currently running within duration')
-                                        
+                                            if utime.time() >= mistersOnTimer:
+                                                print('Misters duration done, turning off for rest of interval')
+                                                misterStatus = False
+                                                valveControl('Close')
+                                                mistersOnTimer = 0
+                                            else:
+                                                print('Misters are currently running within duration')
+                                            
+                            else:
+                                print('Looks like it is too late to run misters')
                         else:
-                            print('Looks like it is too late to run misters')
+                            print('Its too late to run misters')
                     else:
-                        print('Its too late to run misters')
+                        print('Getting close to start, just minutes away..')
                 else:
-                    print('Getting close to start, just minutes away..')
+                    if int(startHour) > int(getTime[0]):
+                        print(f'Its too early to run misters startHour: {startHour} versus current: {getTime[0]}')
             else:
-                if int(startHour) > int(getTime[0]):
-                    print(f'Its too early to run misters startHour: {startHour} versus current: {getTime[0]}')
+                #this else pertains to the manual control button
+                print('Misters are on with manual override')
         else:
-            #this else pertains to the manual control button
-            print('Misters are on with manual override')
+            print(f'The misters are currently disabled')
+            #if valveControl('Status') == 'Opened':
+            #    valveControl('Close')
         sleep(5)
 
 #Variables
@@ -272,6 +296,7 @@ else:
 led.value(0)
 global manualConLabel
 manualConLabel = 'Turn_ON'
+
 
 verbose = False
 # URL of the raw main.py file on GitHub
@@ -312,7 +337,12 @@ Response.default_content_type = 'text/html'
 @app.route('/')
 async def index(request):
     global manualConLabel
+    global disableEnableLabel
     picoTemp = tempSensor()
+    if disableEnableLabel == 'Disable':
+        envStatus = 'Disabled, change in "Modify Temperature Settings"'
+    else:
+        envStatus = 'Enabled, change in "Modify Temperature Settings"'
     if led.value() == 0:
         valveStat = 'Closed'
         manualConLabel = 'Turn_ON'
@@ -320,20 +350,22 @@ async def index(request):
         valveStat = 'Open'
         manualConLabel = 'Turn_OFF'
     readNewValveSettingsDotText()
-    return render_template('home.html', picoTemp, valveStat, toggleTemp, startHour, startMin, endHour, endMin, manualConLabel)
+    return render_template('home.html', picoTemp, valveStat, toggleTemp, startHour, startMin, endHour, endMin, manualConLabel, envStatus)
 
 @app.route('/',methods=["POST"])
 async def toggValve(request):
+    global disableEnableLabel
     value = request.body.decode().replace('\r\n','').split('=')
-    if value[1] == 'Turn_ON':
-        led.value(1)
-    else:
-        led.value(0)
+    if disableEnableLabel == 'Enable':
+        if value[1] == 'Turn_ON':
+            valveControl('Open')
+        else:
+            valveControl('Close')
     return redirect("/")
 
 @app.route('/update')
 async def update(request):
-    return render_template('settings.html', valveHtmlTempOptions, startHourHTMLOptions, startMinHTMLOptions, endHourHTMLOptions, endMinHTMLOptions, intervalHTMLOptions, mistersOnMinutes)
+    return render_template('settings.html', valveHtmlTempOptions, startHourHTMLOptions, startMinHTMLOptions, endHourHTMLOptions, endMinHTMLOptions, intervalHTMLOptions, mistersOnMinutes, disableEnableHTMLOptions)
 
 @app.route('/update',methods=["POST"])
 async def process_updates(request):
