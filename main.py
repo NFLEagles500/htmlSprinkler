@@ -202,8 +202,10 @@ def readNewValveSettingsDotText():
 def valveControl(action):
     if action == 'Open':
         led.value(1)
+        valvePin.value(1)
     elif action == 'Close':
         led.value(0)
+        valvePin.value(0)
     #return current status
     if led.value() == 0:
         return 'Closed'
@@ -228,53 +230,67 @@ def core1():
                 #this means the manual control does not have the
                 #misters running
                 getTime = utcToLocal('time').split(':')
-                if int(startHour) <= int(getTime[0]):
-                    print('The hour after startHour')
-                    if int(startHour) == int(getTime[0]) and int(startMin) <= int(getTime[1]):
-                        print('It is after the Start time, evaluating End...')
-                        if int(getTime[0]) <= int(endHour):
-                            print('current hour is less or equal to endHour')
-                            if int(getTime[0]) == int(endHour) and int(endMin) >= int(getTime[1]):
-                                print('It is a good time to run misters, checking temp...')
-                                #Evaluate whether temp is above option selected AFTER intervalTimer has ran fully
-                                if intervalTimer == 0:
-                                    if tempSensor >= toggleTemp:
-                                        print('Current temp is at or above setting, running misters')
-                                        if mistersOnTimer == 0 and intervalTimer == 0:
-                                            vavleControl('Open')
-                                            misterStatus = True
-                                            mistersOnTimer = utime.time() + mistersOnMinutes*60
-                                            intervalTimer = utime.time() + interval*60
-                                    else:
-                                        print('Temp is too low, or option is disabled')
-                                else:
-                                    #use this else to evaluate if interval timer is done
-                                    if utime.time() >= intervalTimer:
-                                        #setting intervalTimer AND mistersOnTimer to 0
-                                        print('Current time has surpassed the interval, setting values to 0 to re-evaluate current temperature to restart')
-                                        intervalTimer = 0
-                                        mistersOnTimer = 0
-                                    else:
-                                        if mistersOnTimer == 0:
-                                            print('Misters already off, counting down interval')
-                                        else:
-                                            if utime.time() >= mistersOnTimer:
-                                                print('Misters duration done, turning off for rest of interval')
-                                                misterStatus = False
-                                                valveControl('Close')
-                                                mistersOnTimer = 0
-                                            else:
-                                                print('Misters are currently running within duration')
-                                            
-                            else:
-                                print('Looks like it is too late to run misters')
-                        else:
-                            print('Its too late to run misters')
-                    else:
-                        print('Getting close to start, just minutes away..')
+                #if int(startHour) <= int(getTime[0]) <= int(endHour):
+                #    print('The hour is within range')
+                if int(startHour) == int(getTime[0]) and int(startMin) <= int(getTime[1]):
+                    print('Current time equals Start hour and after start minutes, running')
+                    timeRange = True
+                elif int(endHour) == int(getTime[0]) and int(endMin) >= int(getTime[1]):
+                    print('Current time equals End hour and before end minutes, running')
+                    timeRange = True
+                elif int(startHour) < int(getTime[0]) < int(endHour):
+                    print('Current time is within range, running')
+                    timeRange = True
                 else:
-                    if int(startHour) > int(getTime[0]):
-                        print(f'Its too early to run misters startHour: {startHour} versus current: {getTime[0]}')
+                    print(f'time is out of range, Current time: {getTime[0]}:{getTime[1]}, Start time: {startHour}:{startMin}, End time: {endHour}:{endMin}')
+                    timeRange = False
+#                         
+#                         if int(getTime[0]) <= int(endHour):
+#                             print('current hour is less or equal to endHour')
+#                             if int(getTime[0]) == int(endHour) and int(endMin) >= int(getTime[1]):
+#                                 print('It is a good time to run misters, checking temp...')
+#                                 #Evaluate whether temp is above option selected AFTER intervalTimer has ran fully
+                if timeRange:
+                    if intervalTimer == 0:
+                        if tempSensor >= toggleTemp:
+                            print('Current temp is at or above setting, running misters')
+                            if mistersOnTimer == 0:
+                                vavleControl('Open')
+                                misterStatus = True
+                                mistersOnTimer = utime.time() + mistersOnMinutes*60
+                                intervalTimer = utime.time() + interval*60
+                        else:
+                            print('Temp is too low')
+                    else:
+                        #use this else to evaluate if interval timer is done
+                        if utime.time() >= intervalTimer:
+                            #setting intervalTimer AND mistersOnTimer to 0
+                            print('Current time has surpassed the interval, setting values to 0 to re-evaluate current temperature to restart')
+                            intervalTimer = 0
+                            mistersOnTimer = 0
+                        else:
+                            if mistersOnTimer == 0:
+                                print('Misters already off, counting down interval')
+                            else:
+                                if utime.time() >= mistersOnTimer:
+                                    print('Misters duration done, turning off for rest of interval')
+                                    misterStatus = False
+                                    valveControl('Close')
+                                    mistersOnTimer = 0
+                                else:
+                                    print('Misters are currently running within duration')
+                                
+#                             else:
+#                                 print('Looks like it is too late to run misters')
+#                         else:
+#                             print('Its too late to run misters')
+#                     else:
+#                         print('Getting close to start, just minutes away..')
+#                 else:
+#                     if int(startHour) > int(getTime[0]):
+#                         print(f'Its too early to run misters startHour: {startHour} versus current: {getTime[0]}')
+#                     else:
+#                         print(f'Its too late to run misters endHour: {endHour} versus current: {getTime[0]}')
             else:
                 #this else pertains to the manual control button
                 print('Misters are on with manual override')
@@ -296,6 +312,8 @@ else:
 led.value(0)
 global manualConLabel
 manualConLabel = 'Turn_ON'
+valvePin = Pin(26, Pin.OUT)
+valvePin.value(0)
 
 
 verbose = False
