@@ -210,8 +210,8 @@ def valveControl(action):
         valvePin.value(1)
     elif action == 'Close':
         valvePin.value(0)
-    else:
-        print('returning status')
+    #else:
+    #    print('returning status')
     #return current status
     if valvePin.value() == 0:
         return 'Closed'
