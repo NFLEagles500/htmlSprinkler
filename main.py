@@ -14,9 +14,6 @@ import uasyncio
 import _thread
 from microdot_asyncio import Microdot, Response, redirect
 
-#Allow time to interrupt main.py
-sleep(5)
-
 verbose = False
 
 def update_main_script():
@@ -321,6 +318,10 @@ manualConLabel = 'Turn_ON'
 valvePin = Pin(26, Pin.OUT)
 valvePin.value(0)
 
+#Allow time to interrupt main.py and enable LED to show main.py is running
+led.value(1)
+sleep(5)
+led.value(0)
 
 verbose = False
 # URL of the raw main.py file on GitHub
