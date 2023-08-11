@@ -17,6 +17,8 @@ from microdot_asyncio import Microdot, Response, redirect
 #Allow time to interrupt main.py
 sleep(5)
 
+verbose = False
+
 def update_main_script():
     response = urequests.get(github_url)
     new_code = response.text
@@ -24,7 +26,7 @@ def update_main_script():
 
     # Check if the new code is different from the existing code
     if new_code != open('main.py').read():
-        print('Github code is different, updating...')
+        appLog('Github code is different, updating...')
         # Save the new main.py file
         with open('main.py', 'w') as f:
             f.write(new_code)
@@ -33,14 +35,17 @@ def update_main_script():
         machine.reset()
 
 def appLog(stringOfData):
-    with open('log.txt','a') as file:
-        if type(stringOfData) == str:
-            file.write(f"{utcToLocal('datetime')} {stringOfData}\n")
-            print(f"{utcToLocal('datetime')} {stringOfData}")
-        else:
-            file.write(f"{utcToLocal('datetime')} --- Traceback begin ---\n")
-            usys.print_exception(stringOfData,file)
-            file.write(f"{utcToLocal('datetime')} --- Traceback end ---\n")
+    global verbose
+    #print(f'applog verbose value is {verbose}')
+    if verbose:
+        with open('log.txt','a') as file:
+            if type(stringOfData) == str:
+                file.write(f"{utcToLocal('datetime')} {stringOfData}\n")
+                print(f"{utcToLocal('datetime')} {stringOfData}")
+            else:
+                file.write(f"{utcToLocal('datetime')} --- Traceback begin ---\n")
+                usys.print_exception(stringOfData,file)
+                file.write(f"{utcToLocal('datetime')} --- Traceback end ---\n")
 
 def utcToLocal(type):
     #get the offset from timeapi.io, using your timezone
@@ -112,7 +117,7 @@ def createMinHTMLoptionsList(defaultValue, MinOrHour):
     else:
         iterEnd = 59
     fullHtmlStr = ""
-    while iter < iterEnd:
+    while iter <= iterEnd:
         strIter = f'{iter:02d}'
         if iter == defaultValue:
             newStr = f'<option selected="selected" value="{strIter}">{strIter}</option>'
@@ -134,6 +139,10 @@ def createIntervalHTMLOptions(defaultInterval):
     return fullHtmlStr
 
 def writeToValveSettingsDotText(postBody):
+    global intervalTimer
+    global mistersOnTimer
+    mistersOnTimer = 0
+    intervalTimer = 0
     skipItems = ['submitForm=Submit', '']
     valveSetStr = ''
     for item in postBody:
@@ -201,30 +210,33 @@ def readNewValveSettingsDotText():
 
 def valveControl(action):
     if action == 'Open':
-        led.value(1)
         valvePin.value(1)
     elif action == 'Close':
-        led.value(0)
         valvePin.value(0)
+    else:
+        print('returning status')
     #return current status
-    if led.value() == 0:
+    if valvePin.value() == 0:
         return 'Closed'
     else:
         return 'Opened'
         
-
-def core1():
+async def mistersLoop():
     #print(f'Core1 says toggleTemp is {toggleTemp}')
     #Use this to loop evaluation of valve
+    global verbose
+    global intervalDefault
     global mistersOnTimer
     global intervalTimer
     global misterStatus
+    global manualConLabel
+    global disableEnableLabel
+    global toggleTemp
     mistersOnTimer = 0
     intervalTimer = 0
     misterStatus = False
     while True:
-        global manualConLabel
-        global disableEnableLabel
+        
         if disableEnableLabel == 'Enable':
             if manualConLabel == 'Turn_ON':
                 #this means the manual control does not have the
@@ -233,72 +245,66 @@ def core1():
                 #if int(startHour) <= int(getTime[0]) <= int(endHour):
                 #    print('The hour is within range')
                 if int(startHour) == int(getTime[0]) and int(startMin) <= int(getTime[1]):
-                    print('Current time equals Start hour and after start minutes, running')
+                    appLog('Current time equals Start hour and after start minutes, running')
                     timeRange = True
                 elif int(endHour) == int(getTime[0]) and int(endMin) >= int(getTime[1]):
-                    print('Current time equals End hour and before end minutes, running')
+                    appLog('Current time equals End hour and before end minutes, running')
                     timeRange = True
                 elif int(startHour) < int(getTime[0]) < int(endHour):
-                    print('Current time is within range, running')
+                    appLog('Current time is within range, running')
                     timeRange = True
                 else:
-                    print(f'time is out of range, Current time: {getTime[0]}:{getTime[1]}, Start time: {startHour}:{startMin}, End time: {endHour}:{endMin}')
+                    appLog(f'time is out of range, Current time: {getTime[0]}:{getTime[1]}, Start time: {startHour}:{startMin}, End time: {endHour}:{endMin}')
                     timeRange = False
-#                         
-#                         if int(getTime[0]) <= int(endHour):
-#                             print('current hour is less or equal to endHour')
-#                             if int(getTime[0]) == int(endHour) and int(endMin) >= int(getTime[1]):
-#                                 print('It is a good time to run misters, checking temp...')
-#                                 #Evaluate whether temp is above option selected AFTER intervalTimer has ran fully
+                    if valveControl('Status') == 'Opened':
+                        valveControl('Close')
+
                 if timeRange:
                     if intervalTimer == 0:
-                        if tempSensor >= toggleTemp:
-                            print('Current temp is at or above setting, running misters')
+                        if tempSensor() >= float(toggleTemp):
+                            appLog('Current temp is at or above setting, running misters')
                             if mistersOnTimer == 0:
-                                vavleControl('Open')
+                                valveControl('Open')
                                 misterStatus = True
-                                mistersOnTimer = utime.time() + mistersOnMinutes*60
-                                intervalTimer = utime.time() + interval*60
+                                mistersOnTimer = time() + mistersOnMinutes*60
+                                intervalTimer = time() + intervalDefault*60
                         else:
-                            print('Temp is too low')
+                            appLog(f'Temp is too low, Current temp: {tempSensor()}, Configured temp: {toggleTemp}')
+                            if valveControl('Status') == 'Opened':
+                                valveControl('Close')
                     else:
                         #use this else to evaluate if interval timer is done
-                        if utime.time() >= intervalTimer:
+                        if time() >= intervalTimer:
                             #setting intervalTimer AND mistersOnTimer to 0
-                            print('Current time has surpassed the interval, setting values to 0 to re-evaluate current temperature to restart')
+                            appLog('Current time has surpassed the interval, setting values to 0 to re-evaluate current temperature to restart')
                             intervalTimer = 0
                             mistersOnTimer = 0
                         else:
                             if mistersOnTimer == 0:
-                                print('Misters already off, counting down interval')
+                                appLog(f'Misters already off, counting down interval with {intervalTimer - time()} seconds left before re-evaluation')
                             else:
-                                if utime.time() >= mistersOnTimer:
-                                    print('Misters duration done, turning off for rest of interval')
+                                if time() >= mistersOnTimer:
+                                    appLog('Misters duration done, turning off for rest of interval')
                                     misterStatus = False
                                     valveControl('Close')
                                     mistersOnTimer = 0
                                 else:
-                                    print('Misters are currently running within duration')
+                                    appLog(f'Misters are currently running for {mistersOnTimer - time()} more seconds')
                                 
-#                             else:
-#                                 print('Looks like it is too late to run misters')
-#                         else:
-#                             print('Its too late to run misters')
-#                     else:
-#                         print('Getting close to start, just minutes away..')
-#                 else:
-#                     if int(startHour) > int(getTime[0]):
-#                         print(f'Its too early to run misters startHour: {startHour} versus current: {getTime[0]}')
-#                     else:
-#                         print(f'Its too late to run misters endHour: {endHour} versus current: {getTime[0]}')
             else:
                 #this else pertains to the manual control button
-                print('Misters are on with manual override')
+                appLog('Misters are on with manual override')
+                mistersOnTimer = 0
+                intervalTimer = 0
         else:
-            print(f'The misters are currently disabled')
-            #if valveControl('Status') == 'Opened':
-            #    valveControl('Close')
-        sleep(5)
+            appLog(f'The misters are currently disabled')
+            if valveControl('Status') == 'Opened':
+                valveControl('Close')
+        await uasyncio.sleep(5)
+
+def core2():
+    uasyncio.create_task(mistersLoop())
+
 
 #Variables
 #Setting defaults depending on which pico
@@ -323,7 +329,7 @@ github_url = 'https://raw.githubusercontent.com/NFLEagles500/htmlSprinkler/main/
 if dev == 'picow':
     connect()
     # Perform initial update on startup
-    #update_main_script()
+    update_main_script()
     try:
         while True:
             try:
@@ -346,7 +352,7 @@ if dev == 'picow':
         localUtcOffset = responseFromTimeapi.json()['currentUtcOffset']['seconds']
         responseFromTimeapi.close()
     except Exception as error:
-        appLog(error)
+        print(error)
 
 app = Microdot()
 
@@ -361,24 +367,27 @@ async def index(request):
         envStatus = 'Disabled, change in "Modify Temperature Settings"'
     else:
         envStatus = 'Enabled, change in "Modify Temperature Settings"'
-    if led.value() == 0:
+    if valvePin.value() == 0:
         valveStat = 'Closed'
-        manualConLabel = 'Turn_ON'
+        #manualConLabel = 'Turn_ON'
     else:
         valveStat = 'Open'
-        manualConLabel = 'Turn_OFF'
+        #manualConLabel = 'Turn_OFF'
     readNewValveSettingsDotText()
     return render_template('home.html', picoTemp, valveStat, toggleTemp, startHour, startMin, endHour, endMin, manualConLabel, envStatus)
 
 @app.route('/',methods=["POST"])
 async def toggValve(request):
     global disableEnableLabel
+    global manualConLabel
     value = request.body.decode().replace('\r\n','').split('=')
     if disableEnableLabel == 'Enable':
         if value[1] == 'Turn_ON':
             valveControl('Open')
+            manualConLabel = 'Turn_OFF'
         else:
             valveControl('Close')
+            manualConLabel = 'Turn_ON'
     return redirect("/")
 
 @app.route('/update')
@@ -392,10 +401,10 @@ async def process_updates(request):
     return redirect("/")
 
 readNewValveSettingsDotText()
-second_thread = _thread.start_new_thread(core1, ())
-
+second_thread = _thread.start_new_thread(core2, ())
+led.value(1)
 try:
-    print('Starting webserver')
+    appLog('Starting webserver')
     app.run(port=80)
 except:
     app.shutdown()
